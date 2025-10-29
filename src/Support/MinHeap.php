@@ -9,6 +9,7 @@ use SplPriorityQueue;
 final class MinHeap
 {
     private SplPriorityQueue $q;
+    private int $seq = 0;
 
     public function __construct()
     {
@@ -18,8 +19,12 @@ final class MinHeap
 
     public function push(mixed $value, float $priority): void
     {
-        // lower priority value should pop first -> invert
-        $this->q->insert($value, -$priority);
+        // lower priority value should pop first -> invert.
+        // Use a sequence counter as a stable tie-breaker so items pushed earlier
+        // are popped earlier when priorities (floats) are equal.
+        // We insert an array priority: [ -priority, -seq ] so SplPriorityQueue
+        // compares by first element then by second element deterministically.
+        $this->q->insert($value, [-$priority, -$this->seq++]);
     }
 
     public function pop(): mixed { return $this->q->extract(); }
