@@ -11,6 +11,20 @@ use App\Offers\NoOffer;
 use App\Services\CostCalculator;
 use App\Services\DeliveryScheduler;
 
+// Simple CLI flags
+$cliVerbose = false;
+$offersConfig = null;
+foreach ($argv as $a) {
+    if ($a === '--verbose' || $a === '-v') $cliVerbose = true;
+    if ($a === '--help' || $a === '-h') {
+        fwrite(STDOUT, "Usage: php main.php [--help] [--verbose] [--offers=path] < input.txt\n");
+        exit(0);
+    }
+    if (str_starts_with($a, '--offers=')) {
+        $offersConfig = substr($a, strlen('--offers='));
+    }
+}
+
 /**
  * Read stdin fully once, trim, ignore empties.
  */
@@ -35,6 +49,16 @@ if (count($parts) !== 2 || !is_numeric($parts[0]) || !ctype_digit($parts[1])) {
 $baseCost = (float)$parts[0];
 $n        = (int)$parts[1];
 
+// basic validation
+if ($baseCost < 0) {
+    fwrite(STDERR, "Base delivery cost must be non-negative.\n");
+    exit(1);
+}
+if ($n < 0) {
+    fwrite(STDERR, "Number of packages must be non-negative.\n");
+    exit(1);
+}
+
 /**
  * 2) Next n lines: packages
  */
@@ -55,6 +79,19 @@ for ($i = 1; $i <= $n; $i++) {
     $dist   = (float)$p[2];
     $offer  = strtoupper((string)$p[3]);
     if ($offer === 'NA') $offer = null;
+
+    if ($weight < 0 || $dist < 0) {
+        fwrite(STDERR, "Invalid numeric values for package $id. Weight and distance must be non-negative.\n");
+        exit(1);
+    }
+
+    // uniqueness check
+    foreach ($packages as $existing) {
+        if ($existing->id === $id) {
+            fwrite(STDERR, "Duplicate package id: $id\n");
+            exit(1);
+        }
+    }
 
     $packages[] = new Package($id, $weight, $dist, $offer);
 }
@@ -90,14 +127,39 @@ if ($hasScheduling) {
 }
 
 /**
- * 4) Offers registry (easy to extend)
+ * 4) Offers registry (supports optional JSON config passed via --offers=path)
  */
-$registry = new OfferRegistry(
-    new NoOffer(),
-    new RangeOffer('OFR001', 0.10, null, 199.9999,  70, 200),   // dist < 200,  weight 70–200
-    new RangeOffer('OFR002', 0.07, 50,   150,       100, 250),  // dist 50–150, weight 100–250
-    new RangeOffer('OFR003', 0.05, 50,   250,        10, 150)   // dist 50–250, weight 10–150
-);
+$offers = [ new NoOffer() ];
+if ($offersConfig !== null) {
+    if (!file_exists($offersConfig) || !is_readable($offersConfig)) {
+        fwrite(STDERR, "Offers config not found or unreadable: $offersConfig\n");
+        exit(1);
+    }
+    $json = file_get_contents($offersConfig);
+    $data = json_decode($json, true);
+    if (!is_array($data)) {
+        fwrite(STDERR, "Invalid offers config: must be a JSON array\n");
+        exit(1);
+    }
+    foreach ($data as $entry) {
+        if (!isset($entry['code'],$entry['discount'])) continue;
+        $minD = $entry['minDistance'] ?? null;
+        $maxD = $entry['maxDistance'] ?? null;
+        $minW = $entry['minWeight'] ?? null;
+        $maxW = $entry['maxWeight'] ?? null;
+        $offers[] = new RangeOffer(
+            $entry['code'], (float)$entry['discount'], $minD, $maxD, $minW, $maxW
+        );
+    }
+    if ($cliVerbose) fwrite(STDERR, "Loaded " . (count($offers)-1) . " offers from $offersConfig\n");
+} else {
+    // default offers
+    $offers[] = new RangeOffer('OFR001', 0.10, null, 199.9999,  70, 200);
+    $offers[] = new RangeOffer('OFR002', 0.07, 50,   150,       100, 250);
+    $offers[] = new RangeOffer('OFR003', 0.05, 50,   250,        10, 150);
+}
+
+$registry = new OfferRegistry(...$offers);
 
 /**
  * 5) Compute costs
