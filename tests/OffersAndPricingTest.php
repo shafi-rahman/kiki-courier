@@ -1,4 +1,5 @@
 <?php
+
 declare(strict_types=1);
 
 use PHPUnit\Framework\TestCase;
@@ -8,7 +9,7 @@ final class OffersAndPricingTest extends TestCase
     private function runProgram(string $fixture): string
     {
         $cmd = sprintf(
-            'php %s < %s',
+            'php %s --format=raw --quiet < %s',
             escapeshellarg(__DIR__ . '/../main.php'),
             escapeshellarg(__DIR__ . "/fixtures/{$fixture}")
         );
