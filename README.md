@@ -48,8 +48,8 @@ Output displays as a formatted table with package costs and delivery times:
 ┌──────────┬──────────┬──────────┬──────────────┐
 │ Package  │ Discount │  Total   │    ETA (h)   │
 ├──────────┼──────────┼──────────┼──────────────┤
-│ PKG1     │       0 │     750 │        0.42 │
-│ PKG2     │       0 │    1475 │        1.78 │
+│ PKG1     │        0 │      750 │         0.42 │
+│ PKG2     │        0 │     1475 │         1.78 │
 └──────────┴──────────┴──────────┴──────────────┘
 ```
 
@@ -513,3 +513,18 @@ All enhancements verified and production-ready:
 - ✅ Tooling: Automated code quality
 
 **Status**: 🚀 **PRODUCTION READY**
+
+---
+
+## 👨‍💻 Author
+
+**Shafi Ur Rahman**  
+Senior PHP / Laravel Developer  
+
+[![LinkedIn](https://img.shields.io/badge/LinkedIn-Shafi%20Ur%20Rahman-blue?logo=linkedin&style=flat-square)](https://www.linkedin.com/in/shafirahman-com/)
+
+---
+
+## 📄 License
+
+MIT — free to use, modify, and distribute.
